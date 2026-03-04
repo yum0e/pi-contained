@@ -1,0 +1,139 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Install/bootstrap the pi devcontainer template into a repository.
+
+Usage:
+  pi-devcontainer-template [repo]
+  pi-devcontainer-template install [repo]
+  pi-devcontainer-template setup [repo] [--no-alias]
+
+Defaults:
+  command = install
+  repo = current directory
+
+Commands:
+  install   Write template files only
+  setup     Write template files and install shell alias (pi -> pi-devcontainer)
+
+This command overwrites:
+  - .devcontainer/devcontainer.json
+  - .devcontainer/Dockerfile
+  - .pi/extensions/require-devcontainer.ts
+EOF
+}
+
+die() {
+  echo "pi-devcontainer-template: $*" >&2
+  exit 1
+}
+
+resolve_script_path() {
+  local src="${BASH_SOURCE[0]}"
+  while [[ -L "$src" ]]; do
+    local dir
+    dir="$(cd -P -- "$(dirname -- "$src")" && pwd)"
+    src="$(readlink "$src")"
+    [[ "$src" == /* ]] || src="$dir/$src"
+  done
+  printf "%s\n" "$(cd -P -- "$(dirname -- "$src")" && pwd)/$(basename -- "$src")"
+}
+
+script_path="$(resolve_script_path)"
+script_dir="$(cd -P -- "$(dirname -- "$script_path")" && pwd)"
+repo_root="$(cd -P -- "$script_dir/.." && pwd)"
+
+install_template() {
+  local target_abs="$1"
+
+  local src_devcontainer="$repo_root/.devcontainer"
+  local src_extension="$repo_root/extensions/require-devcontainer.ts"
+
+  [[ -f "$src_devcontainer/devcontainer.json" ]] || die "missing template: $src_devcontainer/devcontainer.json"
+  [[ -f "$src_devcontainer/Dockerfile" ]] || die "missing template: $src_devcontainer/Dockerfile"
+  [[ -f "$src_extension" ]] || die "missing template extension: $src_extension"
+
+  mkdir -p "$target_abs/.devcontainer" "$target_abs/.pi/extensions"
+
+  cp -f "$src_devcontainer/devcontainer.json" "$target_abs/.devcontainer/devcontainer.json"
+  cp -f "$src_devcontainer/Dockerfile" "$target_abs/.devcontainer/Dockerfile"
+  cp -f "$src_extension" "$target_abs/.pi/extensions/require-devcontainer.ts"
+
+  echo "✓ Installed template in: $target_abs"
+  echo "  - .devcontainer/devcontainer.json"
+  echo "  - .devcontainer/Dockerfile"
+  echo "  - .pi/extensions/require-devcontainer.ts"
+}
+
+setup_alias() {
+  local alias_script="$repo_root/scripts/setup-shell-alias.sh"
+  [[ -x "$alias_script" ]] || die "missing alias helper: $alias_script"
+  "$alias_script"
+}
+
+cmd="install"
+if [[ $# -gt 0 ]]; then
+  case "$1" in
+    help|-h|--help)
+      usage
+      exit 0
+      ;;
+    install|setup)
+      cmd="$1"
+      shift
+      ;;
+    *)
+      cmd="install"
+      ;;
+  esac
+fi
+
+target="."
+install_alias=1
+if [[ "$cmd" == "install" ]]; then
+  install_alias=0
+fi
+
+target_set=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --no-alias)
+      install_alias=0
+      shift
+      ;;
+    --alias)
+      install_alias=1
+      shift
+      ;;
+    -* )
+      die "unknown option: $1"
+      ;;
+    *)
+      if [[ "$target_set" -eq 1 ]]; then
+        die "unexpected argument: $1"
+      fi
+      target="$1"
+      target_set=1
+      shift
+      ;;
+  esac
+done
+
+[[ -d "$target" ]] || die "target is not a directory: $target"
+target_abs="$(cd "$target" && pwd -P)"
+
+install_template "$target_abs"
+
+if [[ "$cmd" == "setup" && "$install_alias" -eq 1 ]]; then
+  echo
+  setup_alias
+fi
+
+echo
+if [[ "$cmd" == "setup" && "$install_alias" -eq 1 ]]; then
+  echo "Done. Open a new shell (or source your rc file), then run 'pi' in: $target_abs"
+else
+  echo "Done. Run pi from this repo via 'pi-devcontainer' (or alias pi -> pi-devcontainer)."
+fi

@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+die() {
+  echo "pi-devcontainer: $*" >&2
+  exit 1
+}
+
+in_container() {
+  [[ "${DEVCONTAINER:-}" == "true" || -f "/.dockerenv" ]]
+}
+
+host_cwd="$(pwd -P)"
+
+# Use git root when available so subdirectory launches still mount the full repo.
+if git_root="$(git -C "$host_cwd" rev-parse --show-toplevel 2>/dev/null)"; then
+  workspace_folder="$(cd "$git_root" && pwd -P)"
+else
+  workspace_folder="$host_cwd"
+fi
+
+case "$host_cwd" in
+  "$workspace_folder")
+    relative_dir=""
+    ;;
+  "$workspace_folder"/*)
+    relative_dir="${host_cwd#$workspace_folder/}"
+    ;;
+  *)
+    die "current directory is outside workspace folder"
+    ;;
+esac
+
+extension_rel=""
+if [[ -f "$workspace_folder/.pi/extensions/require-devcontainer.ts" ]]; then
+  extension_rel=".pi/extensions/require-devcontainer.ts"
+elif [[ -f "$workspace_folder/extensions/require-devcontainer.ts" ]]; then
+  extension_rel="extensions/require-devcontainer.ts"
+fi
+
+pi_args=("$@")
+
+if in_container; then
+  if [[ -n "$extension_rel" ]]; then
+    pi_args=("-e" "$workspace_folder/$extension_rel" "${pi_args[@]}")
+  fi
+  exec pi "${pi_args[@]}"
+fi
+
+command -v devcontainer >/dev/null 2>&1 || die "missing devcontainer CLI. Install with: npm install -g @devcontainers/cli"
+command -v docker >/dev/null 2>&1 || die "missing Docker runtime (Docker Desktop on macOS)"
+
+devcontainer_json="$workspace_folder/.devcontainer/devcontainer.json"
+[[ -f "$devcontainer_json" ]] || die "missing $devcontainer_json (run: pi-devcontainer-template install $workspace_folder)"
+
+mkdir -p "$HOME/.pi"
+
+container_cwd="/workspace"
+if [[ -n "$relative_dir" ]]; then
+  container_cwd="/workspace/$relative_dir"
+fi
+
+if [[ -n "$extension_rel" ]]; then
+  pi_args=("-e" "/workspace/$extension_rel" "${pi_args[@]}")
+fi
+
+devcontainer up --workspace-folder "$workspace_folder" >/dev/null
+
+quoted_cwd="$(printf '%q' "$container_cwd")"
+quoted_args="$(printf '%q ' "${pi_args[@]}")"
+
+exec devcontainer exec --workspace-folder "$workspace_folder" -- bash -lc "cd $quoted_cwd && exec pi $quoted_args"

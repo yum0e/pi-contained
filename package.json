@@ -1,0 +1,43 @@
+{
+  "name": "pi-devcontainer-extension",
+  "version": "0.1.0",
+  "description": "Minimal pi extension + wrapper that always runs pi inside a devcontainer.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "devcontainer",
+    "security"
+  ],
+  "engines": {
+    "node": ">=24.14.0"
+  },
+  "packageManager": "pnpm@10.6.0",
+  "bin": {
+    "pi-devcontainer": "./bin/pi-devcontainer",
+    "pi-devcontainer-template": "./bin/pi-devcontainer-template",
+    "pi-devcontainer-extension": "./bin/pi-devcontainer-extension"
+  },
+  "scripts": {
+    "install:local": "./scripts/install.sh",
+    "setup": "./scripts/setup-shell-alias.sh",
+    "unsetup": "./scripts/remove-shell-alias.sh"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions"
+    ]
+  },
+  "peerDependencies": {
+    "@mariozechner/pi-coding-agent": "*"
+  },
+  "files": [
+    "bin",
+    "extensions",
+    "scripts",
+    ".devcontainer",
+    "README.md",
+    "LICENSE"
+  ]
+}

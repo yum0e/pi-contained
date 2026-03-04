@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+setup_cmd="$script_dir/pi-devcontainer-template"
+run_cmd="$script_dir/pi-devcontainer"
+
+usage() {
+  cat <<'EOF'
+pi-devcontainer-extension helper
+
+Usage:
+  pi-devcontainer-extension                 # setup current repo (template + alias)
+  pi-devcontainer-extension setup [repo]    # setup explicit repo
+  pi-devcontainer-extension install [repo]  # install template only
+  pi-devcontainer-extension run [pi args..] # run pi via devcontainer wrapper
+  pi-devcontainer-extension template [args] # passthrough to pi-devcontainer-template
+EOF
+}
+
+subcommand="${1:-setup}"
+
+case "$subcommand" in
+  help|-h|--help)
+    usage
+    exit 0
+    ;;
+  setup)
+    shift || true
+    exec "$setup_cmd" setup "$@"
+    ;;
+  install)
+    shift || true
+    exec "$setup_cmd" install "$@"
+    ;;
+  run)
+    shift || true
+    exec "$run_cmd" "$@"
+    ;;
+  template)
+    shift || true
+    exec "$setup_cmd" "$@"
+    ;;
+  *)
+    # If user passed direct pi args, treat as run
+    exec "$run_cmd" "$@"
+    ;;
+esac

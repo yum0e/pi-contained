@@ -1,0 +1,33 @@
+{
+  "name": "pi-devcontainer",
+  "init": true,
+  "build": {
+    "dockerfile": "Dockerfile",
+    "args": {
+      "TZ": "${localEnv:TZ:UTC}",
+      "PI_VERSION": "latest",
+      "JJ_VERSION": "0.39.0"
+    }
+  },
+  "remoteUser": "node",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
+  "workspaceFolder": "/workspace",
+  "mounts": [
+    "source=${localEnv:HOME}/.pi,target=/home/node/.pi,type=bind,consistency=cached"
+  ],
+  "runArgs": [
+    "--cap-drop=ALL",
+    "--security-opt=no-new-privileges:true"
+  ],
+  "containerEnv": {
+    "DEVCONTAINER": "true",
+    "PI_CODING_AGENT_DIR": "/home/node/.pi/agent"
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  }
+}
