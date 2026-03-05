@@ -29,10 +29,12 @@ npm install -g @devcontainers/cli
 
 ## Quick start (automatic bootstrap via extension)
 
-1) Install once:
+> This package is not published to npm yet.
+
+1) Install once from local path (after cloning/downloading this repo):
 
 ```bash
-pi install npm:pi-devcontainer-extension
+pi install /path/to/pi-contained
 ```
 
 2) Inside any repo you want to protect, run `pi` once on host.
@@ -61,7 +63,7 @@ After that, every `pi` launch goes through the wrapper:
 ## One-command manual setup (still available)
 
 ```bash
-npx -y pi-devcontainer-extension@latest setup .
+/path/to/pi-contained/bin/pi-devcontainer-extension setup .
 source ~/.zshrc   # or ~/.bashrc
 pi
 ```

@@ -2,6 +2,7 @@ import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
 const DEVCONTAINER_JSON_TEMPLATE = `{
@@ -119,6 +120,8 @@ export default function (pi: ExtensionAPI) {
 
 const MARKER_START = "# >>> pi-devcontainer >>>";
 const MARKER_END = "# <<< pi-devcontainer <<<";
+const EXTENSION_FILE = fileURLToPath(import.meta.url);
+const BUNDLED_WRAPPER = join(dirname(EXTENSION_FILE), "..", "bin", "pi-devcontainer");
 
 function inContainer(): boolean {
   return process.env.DEVCONTAINER === "true" || existsSync("/.dockerenv");
@@ -175,7 +178,11 @@ function findAliasTarget(): string {
     // fall through
   }
 
-  return "npx -y pi-devcontainer-extension@latest run";
+  if (existsSync(BUNDLED_WRAPPER)) {
+    return BUNDLED_WRAPPER;
+  }
+
+  return "pi-devcontainer";
 }
 
 function escapeForSingleQuotes(value: string): string {
